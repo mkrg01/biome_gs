@@ -19,7 +19,7 @@ Before running the analysis pipeline, you need to prepare some data in the follo
 - [Download the Köppen-Geiger climate classification maps](https://doi.org/10.6084/m9.figshare.6396959). Then, place the files in the `data/Beck_KG_V1` folder.
 - [Download 10000 avian trees of Hackett backbone at stage 1](https://data.vertlife.org) and concatenate these files into a single file. Then, convert the Newick format to the Nexus format. Using the tree file as an input, run [TreeAnnotator](https://beast.community/treeannotator) and generate the maximum clade credibility (MCC) tree of birds. Finally, place the MCC tree file in the `data/tree` folder.
 
-Note that [the mammalian tree](https://doi.org/10.1371/journal.pbio.3000494) will be automatically downloaded through [the analysis pipeline](#Analysis pipeline). For more information, please see the manuscript.
+Note that [the mammalian tree](https://doi.org/10.1371/journal.pbio.3000494) will be automatically downloaded through [the analysis pipeline](#Analysis-pipeline). For more information, please see the manuscript.
 
 ## Analysis pipeline
 
