@@ -1,5 +1,3 @@
-/data/output/Aves/*
-!/data/output/Aves/.gitkeep
 /data/output/Carnivora/*
 !/data/output/Carnivora/.gitkeep
 /data/output/Cetartiodactyla/*
@@ -20,11 +18,11 @@
 !/data/Beck_KG_V1/.gitkeep
 /data/MAMMALS/*
 !/data/MAMMALS/.gitkeep
-/data/Aves/*
-!/data/Aves/.gitkeep
 /data/tree/*
 !/data/tree/.gitkeep
 /_targets/
+/jobscripts/
+/R/traitDependent_functions.R
 
 # History files
 .Rhistory

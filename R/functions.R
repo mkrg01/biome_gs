@@ -164,6 +164,7 @@ prune_tree <- function(tree_path, species) {
   return(tree)
 }
 
+
 calculate_sampling_fraction <- function(character, redlist_species, redlist_species_in_tree) {
   species_all <- character %>% 
     filter(species %in% redlist_species)
@@ -419,6 +420,7 @@ plot_autocorrelation <- function(bisse_result, taxon, removed_step, max_interval
   return(paste0("data/output/", taxon, "/autocorrelation.pdf"))
 }
 
+
 summarize_autocorrelation <- function(bisse_result, taxon, removed_step, max_interval) {
   # Remove steps as a burn-in period
   bisse_result <- bisse_result[(removed_step + 1):(nrow(bisse_result)-removed_step),]
@@ -450,6 +452,7 @@ summarize_autocorrelation <- function(bisse_result, taxon, removed_step, max_int
   
   return(autocorrelation)
 }
+
 
 plot_autocorrelation_summary <- function(autocorrelation, threshold) {
   autocorrelation$taxon <- factor(autocorrelation$taxon, levels=c("Mammalia", "Rodentia", "Primates", "Cetartiodactyla", "Carnivora", "Chiroptera", "Eulipotyphla", "Marsupialia"))
@@ -566,68 +569,6 @@ plot_bisse <- function(bisse_result, taxon, burn_in, interval) {
   return(paste0("data/output/", taxon, "/bisse.tsv"))
 }
 
-
-# Visualize estimated rates of speciation and transition in BiSSE model
-plot_speciation_transition <- function(bisse_result, taxon, burn_in, interval) {
-  # Drop burn-in
-  bisse_result <- bisse_result[burn_in+1:(nrow(bisse_result)-burn_in),]
-  # Sampling
-  samples <- filter(bisse_result, row_number()%%interval == 1)
-
-  # Arrange dataframe
-  speciation <- samples %>%
-    dplyr::select(lambda0, lambda1) %>%
-    rename("Specialist"=lambda0, "Generalist"=lambda1) %>%
-    gather(key=Character, value=estimates)
-  speciation$case <- rep("Speciation rate", length(speciation$estimates))
-
-  transition <- samples %>%
-    dplyr::select(q01, q10) %>%
-    rename("Specialist"=q01, "Generalist"=q10) %>%
-    gather(key=Character, value=estimates)
-  transition$case <- rep("Transition rate", length(transition$estimates))
-
-  cc <- speciation %>%
-    bind_rows(transition)
-  
-  # Mean
-  cc_mean <- tibble(Character="Specialist", estimates=mean(samples$lambda0), case="Speciation rate") %>%
-    bind_rows(tibble(Character="Generalist", estimates=mean(samples$lambda1), case="Speciation rate")) %>%
-    bind_rows(tibble(Character="Specialist", estimates=mean(samples$q01), case="Transition rate")) %>%
-    bind_rows(tibble(Character="Generalist", estimates=mean(samples$q10), case="Transition rate"))
-
-  # Reorder
-  cc$case <- factor(cc$case, levels=c("Speciation rate", "Transition rate"))
-  cc$Character <- factor(cc$Character, levels=c("Specialist", "Generalist"))
-  cc_mean$case <- factor(cc_mean$case, levels=c("Speciation rate", "Transition rate"))
-  cc_mean$Character <- factor(cc_mean$Character, levels=c("Specialist", "Generalist"))
-
-  # Rename columns
-  cc <- cc %>% rename(State=Character)
-  cc_mean <- cc_mean %>% rename(State=Character)
-
-  # Plot
-  p <- ggplot(cc) +
-    geom_histogram(aes(estimates, fill=State), alpha=0.5, position="identity", binwidth=0.01) +
-    geom_vline(data=cc_mean, aes(xintercept=estimates, color=State), linetype="dashed") +
-    scale_fill_manual(values=c("#004165", "#eaab00")) +
-    scale_color_manual(values=c("#004165", "#eaab00")) +
-    facet_wrap(~case, ncol=3, scales="fixed") +
-    ggtitle(str_to_title(taxon)) +
-    xlab("Parameter estimate") +
-    ylab("Number of estimates")
-  
-  # Save
-  ggsave(paste0("data/output/", taxon, "/bisse.pdf"), plot=p, width=5, height=2.4)
-
-  tibble(State="Specialist", case="Speciation rate", mean=mean(samples$lambda0), sd=sd(samples$lambda0)) %>%
-    bind_rows(tibble(State="Generalist", case="Speciation rate", mean=mean(samples$lambda1), sd=sd(samples$lambda1))) %>%
-    bind_rows(tibble(State="Specialist", case="Transition rate", mean=mean(samples$q01), sd=sd(samples$q01))) %>%
-    bind_rows(tibble(State="Generalist", case="Transition rate", mean=mean(samples$q10), sd=sd(samples$q10))) %>%
-    write_tsv(paste0("data/output/", taxon, "/bisse.tsv"))
-  
-  return(paste0("data/output/", taxon, "/bisse.tsv"))
-}
 
 plot_bisse_diff <- function(bisse_result, taxon, burn_in, interval) {
   # Drop burn-in
@@ -821,50 +762,6 @@ plot_speciation <- function(speciation, speciation_summary) {
 }
 
 
-plot_speciation_typical <- function(speciation, speciation_summary) {
-  speciation$Character <- factor(speciation$Character, levels=c("Specialist", "Generalist"))
-  speciation_summary$Character <- factor(speciation_summary$Character, levels=c("Specialist", "Generalist"))
-  speciation$taxon <- factor(speciation$taxon, levels=c("Rodentia", "Primates", "Cetartiodactyla", "Carnivora"))
-  speciation_summary$taxon <- factor(speciation_summary$taxon, levels=c("Rodentia", "Primates", "Cetartiodactyla", "Carnivora"))
-  speciation <- speciation %>% rename(State=Character)
-  speciation_summary <- speciation_summary %>% rename(State=Character)
-
-  p <- ggplot(speciation) +
-    geom_histogram(aes(estimates, fill=State), alpha=0.5, position="identity", binwidth=0.01) +
-    geom_vline(data=speciation_summary, aes(xintercept=estimates, color=State), linetype="dashed") +
-    scale_fill_manual(values=c("#004165", "#eaab00")) +
-    scale_color_manual(values=c("#004165", "#eaab00")) +
-    facet_wrap(~taxon, ncol=4, scales="fixed") +
-    xlab("Speciation rate") +
-    ylab("Number of estimates")
-  
-  ggsave("data/output/Mammalia/speciation_typical.pdf", plot=p, width=9.5, height=2.4)
-  return("data/output/Mammalia/speciation_typical.pdf")
-}
-
-
-plot_speciation_atypical <- function(speciation, speciation_summary) {
-  speciation$Character <- factor(speciation$Character, levels=c("Specialist", "Generalist"))
-  speciation_summary$Character <- factor(speciation_summary$Character, levels=c("Specialist", "Generalist"))
-  speciation$taxon <- factor(speciation$taxon, levels=c("Chiroptera", "Eulipotyphla", "Marsupialia", "Aves"))
-  speciation_summary$taxon <- factor(speciation_summary$taxon, levels=c("Chiroptera", "Eulipotyphla", "Marsupialia", "Aves"))
-  speciation <- speciation %>% rename(State=Character)
-  speciation_summary <- speciation_summary %>% rename(State=Character)
-
-  p <- ggplot(speciation) +
-    geom_histogram(aes(estimates, fill=State), alpha=0.5, position="identity", binwidth=0.01) +
-    geom_vline(data=speciation_summary, aes(xintercept=estimates, color=State), linetype="dashed") +
-    scale_fill_manual(values=c("#004165", "#eaab00")) +
-    scale_color_manual(values=c("#004165", "#eaab00")) +
-    facet_wrap(~taxon, ncol=4, scales="fixed") +
-    xlab("Speciation rate") +
-    ylab("Number of estimates")
-  
-  ggsave("data/output/Mammalia/speciation_atypical.pdf", plot=p, width=9.5, height=2.4)
-  return("data/output/Mammalia/speciation_atypical.pdf")
-}
-
-
 plot_speciation_diff <- function(speciation, speciation_summary) {
   speciation$taxon <- factor(speciation$taxon, levels=c("Mammalia", "Rodentia", "Primates", "Cetartiodactyla", "Carnivora", "Chiroptera", "Eulipotyphla", "Marsupialia"))
   speciation_summary$taxon <- factor(speciation_summary$taxon, levels=c("Mammalia", "Rodentia", "Primates", "Cetartiodactyla", "Carnivora", "Chiroptera", "Eulipotyphla", "Marsupialia"))
@@ -903,50 +800,6 @@ plot_transition <- function(transition, transition_summary) {
   
   ggsave("data/output/Mammalia/transition.pdf", plot=p, width=9.5, height=4)
   return("data/output/Mammalia/transition.pdf")
-}
-
-
-plot_transition_typical <- function(transition, transition_summary) {
-  transition$Character <- factor(transition$Character, levels=c("Specialist", "Generalist"))
-  transition_summary$Character <- factor(transition_summary$Character, levels=c("Specialist", "Generalist"))
-  transition$taxon <- factor(transition$taxon, levels=c("Rodentia", "Primates", "Cetartiodactyla", "Carnivora"))
-  transition_summary$taxon <- factor(transition_summary$taxon, levels=c("Rodentia", "Primates", "Cetartiodactyla", "Carnivora"))
-  transition <- transition %>% rename(State=Character)
-  transition_summary <- transition_summary %>% rename(State=Character)
-
-  p <- ggplot(transition) +
-    geom_histogram(aes(estimates, fill=State), alpha=0.5, position="identity", binwidth=0.01) +
-    geom_vline(data=transition_summary, aes(xintercept=estimates, color=State), linetype="dashed") +
-    scale_fill_manual(values=c("#004165", "#eaab00")) +
-    scale_color_manual(values=c("#004165", "#eaab00")) +
-    facet_wrap(~taxon, ncol=4, scales="fixed") +
-    xlab("Transition rate") +
-    ylab("Number of estimates")
-  
-  ggsave("data/output/Mammalia/transition_typical.pdf", plot=p, width=9.5, height=2.4)
-  return("data/output/Mammalia/transition_typical.pdf")
-}
-
-
-plot_transition_atypical <- function(transition, transition_summary) {
-  transition$Character <- factor(transition$Character, levels=c("Specialist", "Generalist"))
-  transition_summary$Character <- factor(transition_summary$Character, levels=c("Specialist", "Generalist"))
-  transition$taxon <- factor(transition$taxon, levels=c("Chiroptera", "Eulipotyphla", "Marsupialia", "Aves"))
-  transition_summary$taxon <- factor(transition_summary$taxon, levels=c("Chiroptera", "Eulipotyphla", "Marsupialia", "Aves"))
-  transition <- transition %>% rename(State=Character)
-  transition_summary <- transition_summary %>% rename(State=Character)
-
-  p <- ggplot(transition) +
-    geom_histogram(aes(estimates, fill=State), alpha=0.5, position="identity", binwidth=0.01) +
-    geom_vline(data=transition_summary, aes(xintercept=estimates, color=State), linetype="dashed") +
-    scale_fill_manual(values=c("#004165", "#eaab00")) +
-    scale_color_manual(values=c("#004165", "#eaab00")) +
-    facet_wrap(~taxon, ncol=4, scales="fixed") +
-    xlab("Transition rate") +
-    ylab("Number of estimates")
-  
-  ggsave("data/output/Mammalia/transition_atypical.pdf", plot=p, width=9.5, height=2.4)
-  return("data/output/Mammalia/transition_atypical.pdf")
 }
 
 
@@ -1042,118 +895,161 @@ output_summarized_number <- function(df) {
 }
 
 
+calculate_dr_statistic <- function(tree, character, redlist_binomial_in_tree, taxon) {
+  # Prepare a tree including species with no trait information
+  tree <- read.nexus(tree)
+  tree <- ape::drop.tip(tree, "_Anolis_carolinensis")
 
-# --- Aves
+  if (taxon == "Mammalia") {
+    species_list <- tree$tip.label
+  } else if (taxon == "Marsupialia") {
+    species_list <- tree$tip.label[str_detect(tree$tip.label, "_PAUCITUBERCULATA|_DIDELPHIMORPHIA|_MICROBIOTHERIA|_NOTORYCTEMORPHIA|_PERAMELEMORPHIA|_DASYUROMORPHIA|_DIPROTODONTIA")]
+  } else {
+    species_list <- tree$tip.label[str_detect(tree$tip.label, toupper(taxon))]
+  }
+  tree <- keep.tip(tree, species_list)
 
-preprocessing_redlist_Aves <- function(redlist_path) {
-  # Read polygon data
-  redlist <- st_read(redlist_path)
+  spl <- stringr::str_split(tree$tip.label, "_")
+  leaf_list_renamed <- c()
+  for (i in 1:length(tree$tip.label)) leaf_list_renamed <- append(leaf_list_renamed, paste(spl[i][[1]][1], spl[i][[1]][2]))
+  tree$tip.label <- gsub(" ", "_", leaf_list_renamed)
 
-  # Resolve MULTISURFACE
-  redlist <- st_cast(redlist, "MULTIPOLYGON")
+  if (is.ultrametric(tree) == F) {
+    tree <- force.ultrametric(tree)
+  }
 
-  # Use "Extant", "Possibly Extinct", and "Extinct" distribution
-  redlist <- filter(redlist, presence==1 | presence==4 | presence==5)
+  # Calculate DR statistic
+  dr_statistic <- DR_statistic(tree)
 
-  # Use only "Native" distribution
-  redlist <- filter(redlist, origin==1)
+  character <- character %>%
+    filter(species %in% redlist_binomial_in_tree)
+  states <- setNames(character$generalist, gsub(" ", "_", character$species))
 
-  return(redlist)
-}
-
-
-# Merge IUCN Red List polygon data with Köppen-Geiger climate classification map
-merge_redlist_with_climate_Aves <- function(redlist, climate_map_path, confidence_map_path) {
-  # Read raster files
-  climate_map <- raster(climate_map_path)
-  confidence_map <- raster(confidence_map_path)
-
-  # Use only 100% confidence cells in the map
-  kg_conf_binary <- calc(confidence_map, fun=function(x) {x==100})
-  kg_100conf <- climate_map * kg_conf_binary
-
-  # Layerize the map for parallelization in exactextractr
-  kg_brick <- layerize(kg_100conf)
-
-  # Merge polygon data with climate classes
-  redlist <- cbind(redlist, exact_extract(kg_brick, redlist, 'weighted_sum', weights = area(kg_brick), stack_apply = TRUE))
-  redlist <- st_drop_geometry(redlist)
-
-  # Change colnames and select some columns
-  tmp <- data.frame(binomial="temporary", weighted_sum.X0=0 , weighted_sum.X1=0, weighted_sum.X2=0, weighted_sum.X3=0, weighted_sum.X4=0, weighted_sum.X5=0, weighted_sum.X6=0, weighted_sum.X7=0, weighted_sum.X8=0, weighted_sum.X9=0, weighted_sum.X10=0, weighted_sum.X11=0, weighted_sum.X12=0, weighted_sum.X13=0, weighted_sum.X14=0, weighted_sum.X15=0, weighted_sum.X16=0, weighted_sum.X17=0, weighted_sum.X18=0, weighted_sum.X19=0, weighted_sum.X20=0, weighted_sum.X21=0, weighted_sum.X22=0, weighted_sum.X23=0, weighted_sum.X24=0, weighted_sum.X25=0, weighted_sum.X26=0, weighted_sum.X27=0, weighted_sum.X28=0, weighted_sum.X29=0, weighted_sum.X30=0)
-  redlist <- merge(redlist, tmp, all=T) %>%
-    as_tibble() %>%
-    filter(binomial != "temporary") %>%
-    mutate_if(is.numeric, ~tidyr::replace_na(., 0))
-  redlist <- redlist %>%
-    dplyr::rename(N = weighted_sum.X0, Af = weighted_sum.X1, Am = weighted_sum.X2, Aw = weighted_sum.X3, BWh = weighted_sum.X4, BWk = weighted_sum.X5, BSh = weighted_sum.X6, BSk = weighted_sum.X7, Csa = weighted_sum.X8, Csb = weighted_sum.X9, Csc = weighted_sum.X10, Cwa = weighted_sum.X11, Cwb = weighted_sum.X12, Cwc = weighted_sum.X13, Cfa = weighted_sum.X14, Cfb = weighted_sum.X15, Cfc = weighted_sum.X16, Dsa = weighted_sum.X17, Dsb = weighted_sum.X18, Dsc = weighted_sum.X19, Dsd = weighted_sum.X20, Dwa = weighted_sum.X21, Dwb = weighted_sum.X22, Dwc = weighted_sum.X23, Dwd = weighted_sum.X24, Dfa = weighted_sum.X25, Dfb = weighted_sum.X26, Dfc = weighted_sum.X27, Dfd = weighted_sum.X28, ET = weighted_sum.X29, EF = weighted_sum.X30)
-  kg_list <- c("N", "Af", "Am", "Aw", "BWh", "BWk", "BSh", "BSk", "Csa", "Csb", "Csc", "Cwa", "Cwb", "Cwc", "Cfa", "Cfb", "Cfc", "Dsa", "Dsb", "Dsc", "Dsd", "Dwa", "Dwb", "Dwc", "Dwd", "Dfa", "Dfb", "Dfc", "Dfd", "ET", "EF")
-  redlist$species <- redlist$binomial
-  redlist$order <- ""
-  redlist <- dplyr::select(redlist, c("species", all_of(kg_list)), order)
-
-  return(redlist)
-}
-
-
-extract_species_from_redlist_Aves <- function(redlist) {
-  return(redlist$species)
-}
-
-
-extract_species_from_tree_Aves <- function(tree_path) {
-  tree <- ape::read.nexus(tree_path)
-  return(gsub("_", " ", tree$tip.label))
-}
-
-
-# Visualize a tree with species names
-plot_tree_Aves <- function(pruned_tree, character, redlist_species_in_tree, taxon) {
-  character <- character %>% 
-    filter(species %in% redlist_species_in_tree) %>%
-    mutate(type = ifelse(generalist==0, "Specialist", "Generalist")) %>% 
-    mutate(pos = 1) %>% 
-    dplyr::select(species, type, pos)
-  character$type <- factor(character$type, levels=c("Specialist", "Generalist"))
-  character$species <- gsub(" ", "_", character$species)
+  sp_list <- names(states)
+  tibble(species = sp_list, dr_statistic = dr_statistic[sp_list], trait = states[sp_list]) %>%
+    mutate(trait = ifelse(trait == 1, "Generalist", "Specialist")) %>%
+    write_tsv(paste0("data/output/", taxon, "/dr_statistic.tsv"))
   
-  p <- ggtree(pruned_tree, layout="fan", open.angle=10, size=0.5) +
-    geom_tiplab(size=0.6) + 
-    geom_fruit(
-      data=character,
-      geom=geom_tile,
-      mapping=aes(y=species, x=pos, fill=type),
-      offset=0.025,
-      pwidth=0.0005
-    ) + 
-    scale_fill_manual(values=c("#004165", "#eaab00"))
-
-  ggsave(paste0("data/output/", taxon, "/pruned_tree.pdf"), plot=p, width=70, height=70, limitsize=FALSE)
-  return(paste0("data/output/", taxon, "/pruned_tree.pdf"))
+  return(paste0("data/output/", taxon, "/dr_statistic.tsv"))
 }
 
 
-summarize_number_Aves <- function(character, redlist_species, redlist_species_in_tree, taxon) {
-  species_all <- character %>% 
-    filter(species %in% redlist_species)
-  species_tree <- character %>% 
-    filter(species %in% redlist_species_in_tree)
+plot_dr_statistic <- function(dr_statistic, taxon) {
+  df <- read_tsv(dr_statistic)
+  df$trait <- factor(df$trait, levels=c("Specialist", "Generalist"))
+
+  p <- df %>%
+    ggplot(aes(x=trait, y=dr_statistic)) +
+    geom_boxplot() +
+    geom_jitter(color="black", size=0.4, alpha=0.1) +
+    ggtitle(taxon) +
+    xlab("") +
+    ylab("Speciation rate (DR statistic)")
   
-  specialist_all <- species_all %>% 
-    filter(generalist == 0) %>% 
-    .$species %>% 
-    length()
-  generalist_all <- length(species_all$species) - specialist_all
-  specialist_tree <- species_tree %>% 
-    filter(generalist == 0) %>% 
-    .$species %>% 
-    length()
-  generalist_tree <- length(species_tree$species) - specialist_tree
+  ggsave(paste0("data/output/", taxon, "/dr_statistic.pdf"), plot=p, width=2.2, height=3.5)
+  return(paste0("data/output/", taxon, "/dr_statistic.pdf"))
+}
 
-  sampling_fraction_specialist <- specialist_tree / specialist_all
-  sampling_fraction_generalist <- generalist_tree / generalist_all
 
-  df <- tibble(Taxon = taxon, Specialist_all = specialist_all, Generalist_all = generalist_all, Specialist_tree = specialist_tree, Generalist_tree = generalist_tree, Specialist_sampling.f = sampling_fraction_specialist, Generalist_sampling.f = sampling_fraction_generalist)
-  df %>% 
-    write_tsv("data/output/Aves/number_summary.tsv")
+run_fisse <- function(tree, character, redlist_binomial_in_tree, taxon) {
+  # Prepare a tree including species with no trait information
+  tree <- read.nexus(tree)
+  tree <- ape::drop.tip(tree, "_Anolis_carolinensis")
+
+  if (taxon == "Mammalia") {
+    species_list <- tree$tip.label
+  } else if (taxon == "Marsupialia") {
+    species_list <- tree$tip.label[str_detect(tree$tip.label, "_PAUCITUBERCULATA|_DIDELPHIMORPHIA|_MICROBIOTHERIA|_NOTORYCTEMORPHIA|_PERAMELEMORPHIA|_DASYUROMORPHIA|_DIPROTODONTIA")]
+  } else {
+    species_list <- tree$tip.label[str_detect(tree$tip.label, toupper(taxon))]
+  }
+  tree <- keep.tip(tree, species_list)
+
+  spl <- stringr::str_split(tree$tip.label, "_")
+  leaf_list_renamed <- c()
+  for (i in 1:length(tree$tip.label)) leaf_list_renamed <- append(leaf_list_renamed, paste(spl[i][[1]][1], spl[i][[1]][2]))
+  tree$tip.label <- gsub(" ", "_", leaf_list_renamed)
+
+  # Characters
+  character <- character %>%
+    filter(species %in% redlist_binomial_in_tree)
+  states <- setNames(character$generalist, gsub(" ", "_", character$species))
+
+  tree <- keep.tip(tree, gsub(" ", "_", character$species))
+
+  if (is.ultrametric(tree) == F) {
+    tree <- force.ultrametric(tree, method="extend") # to avoid multifurcation
+  }
+
+  # Run FISSE
+  res <- FISSE.binary(tree, states, reps=2000, tol=0.3)
+  return(res)
+}
+
+
+# DR statistic from complete trees
+extract_dr_stat_complete_trees <- function(dr_stat, character, redlist_binomial_in_tree, taxa) {
+  df <- read_table(dr_stat, col_names=FALSE, skip=1) %>%
+    dplyr::select(X1, X3) %>%
+		rename(species=X1, drstat=X3) %>%
+		mutate(species = substr(species, 2, 1000))
+	
+	spl <- stringr::str_split(df$species, "_")
+	leaf_list_renamed <- c()
+	for (i in 1:length(df$species)) leaf_list_renamed <- append(leaf_list_renamed, paste(spl[i][[1]][1], spl[i][[1]][2]))
+	df$species <- leaf_list_renamed
+	
+  character <- character %>%
+	  filter(species %in% redlist_binomial_in_tree)
+  
+  df %>%
+	  filter(species %in% character$species) %>%
+    write_tsv(paste0("data/output/", taxa, "/dr_stat_mean_complete_trees.tsv"))
+  
+  return(paste0("data/output/", taxa, "/dr_stat_mean_complete_trees.tsv"))
+}
+
+
+plot_dr_stat_complete_trees <- function(dr_stat, character, taxa) {
+  df <- read_tsv(dr_stat) %>%
+    left_join(character, by = "species") %>%
+    mutate(trait = ifelse(generalist == 1, "Generalist", "Specialist"))
+  
+  df$trait <- factor(df$trait, levels=c("Specialist", "Generalist"))
+
+  p <- df %>%
+    ggplot(aes(x=trait, y=drstat)) +
+    geom_boxplot() +
+    geom_jitter(color="black", size=0.4, alpha=0.2) +
+    ggtitle(taxa) +
+    xlab("") +
+    ylab("Speciation rate (DR statistic)")
+  
+  ggsave(paste0("data/output/", taxa, "/dr_stat_mean_complete_trees.pdf"), plot=p, width=2.2, height=3.5)
+  return(paste0("data/output/", taxa, "/dr_stat_mean_complete_trees.pdf"))
+}
+
+
+plot_dr_stat_all <- function(dr_stat_complete, dr_stat, character, taxa) {
+  dr_stat_complete <- read_tsv(dr_stat_complete) %>%
+    left_join(character, by = "species") %>%
+    mutate(trait = ifelse(generalist == 1, "G_10000", "S_10000"))
+
+  dr_stat <- read_tsv(dr_stat) %>%
+    rename(drstat = dr_statistic) %>% 
+    mutate(trait = ifelse(trait == "Generalist", "G", "S"))
+
+  df <- bind_rows(dr_stat_complete, dr_stat)
+  df$trait <- factor(df$trait, levels=c("S", "G", "S_10000", "G_10000"))
+
+  p <- df %>%
+    ggplot(aes(x=trait, y=drstat)) +
+    geom_boxplot() +
+    geom_jitter(color="black", size=0.4, alpha=0.1) +
+    ggtitle(taxa) +
+    xlab("") +
+    ylab("Speciation rate (DR statistic)")
+  
+  ggsave(paste0("data/output/", taxa, "/dr_stat_all.pdf"), plot=p, width=2.9, height=4.5)
+  return(paste0("data/output/", taxa, "/dr_stat_all.pdf"))
 }
