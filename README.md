@@ -1,6 +1,6 @@
 # biome_gs
 
-Code repository to run analyses for Nishiguchi et al. "Global-scale analysis of terrestrial mammals highlights key ecological features affecting patterns of speciation."
+Code repository to run analyses for Nishiguchi et al. "Ecological features affecting patterns of speciation among terrestrial mammals."
 
 The code is in [R](https://cran.r-project.org/). The [targets package](https://wlandau.github.io/targets/index.html) is used to manage the workflow.
 
@@ -15,9 +15,9 @@ To run all analyses:
 Before running the analysis pipeline, you need to prepare some data and code in the following procedures:
 
 - [Download spatial data of mammals](https://www.iucnredlist.org/resources/spatial-data-download). Then, place the files in the `data/MAMMALS` folder.
-- [Download the Köppen-Geiger climate classification maps](https://doi.org/10.6084/m9.figshare.6396959). Then, place the files in the `data/Beck_KG_V1` folder.
-- [Download the DR statistics calculated from 10,000 node-dated trees](https://doi.org/10.5061/dryad.tb03d03). Then, place the file in the `data/tree` folder.
-- [Download the code for FiSSE](https://github.com/macroevolution/fisse/blob/master/run_fisse/traitDependent_functions.R). Then, place the file in the `R` folder. Please note that the code for calculating the p-value was modified from `sum(delta_true > delta) / (reps + 1)` to `min(sum(delta_true > delta) / reps, 1 - sum(delta_true > delta) / reps) * 2` to derive the p-values presented in our manuscript.
+- [Download Köppen-Geiger climate classification maps](https://doi.org/10.6084/m9.figshare.6396959). Then, place the files in the `data/Beck_KG_V1` folder.
+- [Download DR statistics calculated from 10,000 node-dated trees](https://doi.org/10.5061/dryad.tb03d03). Then, place the file in the `data/tree` folder.
+- [Download the code for FiSSE](https://github.com/macroevolution/fisse/blob/master/run_fisse/traitDependent_functions.R). Then, place the file in the `R` folder. Please note that the code for calculating p-values was modified from `sum(delta_true > delta) / (reps + 1)` to `min(sum(delta_true > delta) / reps, 1 - sum(delta_true > delta) / reps) * 2` to derive p-values presented in our manuscript.
 
 [The mammalian tree](https://doi.org/10.1371/journal.pbio.3000494) will be automatically downloaded through [the analysis pipeline](#Analysis-pipeline). For more information, please see our manuscript.
 
